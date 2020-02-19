@@ -7,11 +7,16 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/web/mgmt/2018-02-01/web"
+	"github.com/Azure/azure-sdk-for-go/services/web/mgmt/2019-08-01/web"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/suppress"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/utils"
+)
+
+const (
+	// this exists here to workaround the field being removed in the Swagger when the new version was introduced
+	ManagedServiceIdentityTypeSystemAssignedUserAssigned web.ManagedServiceIdentityType = "SystemAssigned, UserAssigned"
 )
 
 func SchemaAppServiceAadAuthSettings() *schema.Schema {
@@ -225,7 +230,10 @@ func SchemaAppServiceIdentity() *schema.Schema {
 					ValidateFunc: validation.StringInSlice([]string{
 						string(web.ManagedServiceIdentityTypeNone),
 						string(web.ManagedServiceIdentityTypeSystemAssigned),
-						string(web.ManagedServiceIdentityTypeSystemAssignedUserAssigned),
+						// TODO: switch back to using:
+						// string(web.ManagedServiceIdentityTypeSystemAssignedUserAssigned),
+						// once https://github.com/Azure/azure-rest-api-specs/pull/8435 has been merged
+						string(ManagedServiceIdentityTypeSystemAssignedUserAssigned),
 						string(web.ManagedServiceIdentityTypeUserAssigned),
 					}, true),
 					DiffSuppressFunc: suppress.CaseDifference,
@@ -1334,7 +1342,9 @@ func ExpandAppServiceIdentity(input []interface{}) *web.ManagedServiceIdentity {
 		Type: identityType,
 	}
 
-	if managedServiceIdentity.Type == web.ManagedServiceIdentityTypeUserAssigned || managedServiceIdentity.Type == web.ManagedServiceIdentityTypeSystemAssignedUserAssigned {
+	// TODO: switch back to using: web.ManagedServiceIdentityTypeSystemAssignedUserAssigned
+	// once https://github.com/Azure/azure-rest-api-specs/pull/8435 has been merged
+	if managedServiceIdentity.Type == web.ManagedServiceIdentityTypeUserAssigned || managedServiceIdentity.Type == ManagedServiceIdentityTypeSystemAssignedUserAssigned {
 		managedServiceIdentity.UserAssignedIdentities = identityIds
 	}
 
